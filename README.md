@@ -2,6 +2,8 @@
 
 Transform your voice into text effortlessly with Whisper Notes - a modern, lightweight note-taking app powered by whisper.cpp. Capture your thoughts, ideas, and notes through speech, all processed locally on your machine.
 
+![Demo of Whisper Notes](demowhisper.gif)
+
 ## ✨ Features
 
 - **Voice-to-Text**: Seamlessly convert speech to text using state-of-the-art Whisper technology
@@ -22,13 +24,13 @@ Transform your voice into text effortlessly with Whisper Notes - a modern, light
 ### Prerequisites
 - Rust
 - Node.js
-- pnpm
+- npm
 
 ### Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/whisper-notes
+git clone https://github.com/AsyncFuncAI/whisper-notes.git
 
 # Install dependencies
 cd whisper-notes
@@ -47,7 +49,7 @@ pnpm tauri build
 
 ## 🗺️ Roadmap
 
-- [ ] System audio recording support
+- [ ] System audio recording support [a lot of work, rust does not have out of the box support for this]
 - [ ] Multiple language support
 - [ ] Custom hotkeys
 - [ ] Export notes in various formats
