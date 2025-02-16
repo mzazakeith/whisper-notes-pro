@@ -81,3 +81,7 @@ Found a bug? Please open an issue with:
 ---
 
 Built with ❤️ using [Tauri](https://tauri.app), [Rust](https://www.rust-lang.org), and [whisper.cpp](https://github.com/ggerganov/whisper.cpp)
+
+## Credits
+
+This project was inspired by and forked from [Benjamin Streit's Tauri Todo App](https://github.com/mbenja/tauri-todo-app) - a beautifully crafted minimalistic todo application built with Tauri and React. Many thanks to Benjamin for open-sourcing his work which served as an excellent foundation for this project.
