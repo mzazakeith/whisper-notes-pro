@@ -1,47 +1,35 @@
 import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
-
-import Sidebar from './components/Sidebar';
-import TodoListComponent from './components/TodoList';
+import NoteSidebar from './components/NoteSidebar';
+import NoteEditor from './components/NoteEditor';
 import { useStore } from './store/store';
 
 export default function App() {
-  const getTodoLists = useStore((state) => state.getTodoLists);
-  const todoLists = useStore((state) => state.todoLists);
-  const selectedTodoList = useStore((state) => state.selectedTodoList);
-  const selectTodoList = useStore((state) => state.selectTodoList);
-  const setTheme = useStore((state) => state.setTheme);
+    const getNotes = useStore((state) => state.getNotes);
+    const selectedNote = useStore((state) => state.selectedNote);
+    const setTheme = useStore((state) => state.setTheme);
 
-  useEffect(() => {
-    getTodoLists();
-    setTheme();
-  }, []);
+    useEffect(() => {
+        getNotes();
+        setTheme();
+    }, []);
 
-  useEffect(() => {
-    if (selectedTodoList) {
-      selectTodoList(
-        todoLists.find((todoList) => todoList.id === selectedTodoList.id) ??
-          null
-      );
-    }
-  }, [todoLists]);
-
-  return (
-    <div className="bg-gray-50 dark:bg-slate-800 dark:text-white flex flex-row h-screen w-screen">
-      <Sidebar />
-      {selectedTodoList && <TodoListComponent todoList={selectedTodoList} />}
-      {!selectedTodoList && (
-        <div className="flex grow h-full justify-center items-center">
-          <p className="font-medium text-lg">Select a list to get started</p>
+    return (
+        <div className="bg-gray-50 dark:bg-slate-800 dark:text-white flex flex-row h-screen w-screen">
+            <NoteSidebar />
+            {selectedNote ? (
+                <NoteEditor note={selectedNote} />
+            ) : (
+                <div className="flex grow h-full justify-center items-center">
+                    <p className="font-medium text-lg">Select a note or create a new one to get started</p>
+                </div>
+            )}
+            <Toaster
+                position="bottom-center"
+                toastOptions={{
+                    className: 'bg-gray-50 dark:bg-slate-600 dark:text-white rounded-md shadow-md',
+                }}
+            />
         </div>
-      )}
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          className:
-            'bg-gray-50 dark:bg-slate-600 dark:text-white rounded-md shadow-md',
-        }}
-      />
-    </div>
-  );
+    );
 }

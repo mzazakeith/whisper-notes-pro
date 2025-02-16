@@ -1,169 +1,98 @@
-import toast from 'react-hot-toast';
-
 import { invoke } from '@tauri-apps/api/tauri';
 import create from 'zustand';
-
-import { Result } from '../types/Result';
-import { State } from '../types/State';
+import { Note } from '../types/Note';
 import { Theme } from '../types/Theme';
-import { TodoItem } from '../types/TodoItem';
-import { TodoList } from '../types/TodoList';
+import toast from 'react-hot-toast';
+
+type State = {
+    notes: Note[];
+    selectedNote: Note | null;
+    selectNote: (note: Note | null) => void;
+    getNotes: () => Promise<void>;
+    createNote: (title: string, content: string) => Promise<void>;
+    updateNote: (note: Note) => Promise<void>;
+    deleteNote: (noteId: number) => Promise<void>;
+    theme: Theme;
+    setTheme: (theme?: Theme) => void;
+};
 
 export const useStore = create<State>((set, get) => ({
-  todoLists: [],
-  selectedTodoList: null,
-  selectTodoList: (todoList: TodoList | null) => {
-    set({ selectedTodoList: todoList });
-  },
-  getTodoLists: async () => {
-    const result: Result<TodoList[], string> = await invoke('get_todo_lists');
-    if (typeof result === 'string') {
-      toast.error(`Something went wrong: ${result}`);
-      return;
-    }
-
-    set({ todoLists: result });
-  },
-  createTodoList: async (name: string) => {
-    const result: Result<TodoList, string> = await invoke('create_todo_list', {
-      name,
-    });
-
-    if (typeof result === 'string') {
-      toast.error(`Something went wrong: ${result}`);
-      return;
-    }
-
-    set({
-      todoLists: [...get().todoLists, result],
-      selectedTodoList: result,
-    });
-  },
-  deleteTodoList: async (listId: number) => {
-    const result: Result<TodoList, string> = await invoke('delete_todo_list', {
-      listId,
-    });
-    if (typeof result === 'string') {
-      toast.error(`Something went wrong: ${result}`);
-      return;
-    }
-
-    set({
-      todoLists: [
-        ...get().todoLists.filter((todoList) => todoList.id !== listId),
-      ],
-      selectedTodoList: null,
-    });
-  },
-  renameTodoList: async (listId: number, newName: string) => {
-    const result: Result<TodoList, string> = await invoke('rename_todo_list', {
-      listId,
-      newName,
-    });
-
-    if (typeof result === 'string') {
-      toast.error(`Something went wrong: ${result}`);
-      return;
-    }
-
-    set({
-      todoLists: [
-        ...get().todoLists.map((todoList) => {
-          if (todoList.id === listId) {
-            todoList = result;
-          }
-
-          return todoList;
-        }),
-      ],
-    });
-  },
-  createTodoItem: async (listId: number, todoText: string) => {
-    const result: Result<TodoItem, string> = await invoke('create_todo_item', {
-      listId,
-      todoText,
-    });
-
-    if (typeof result === 'string') {
-      toast.error(`Something went wrong: ${result}`);
-      return;
-    }
-
-    set({
-      todoLists: [
-        ...get().todoLists.map((todoList) => {
-          if (todoList.id === listId) {
-            todoList.todos.push(result);
-          }
-
-          return todoList;
-        }),
-      ],
-    });
-  },
-  updateTodoItemComplete: async (
-    listId: number,
-    todoId: number,
-    complete: boolean
-  ) => {
-    const result: Result<TodoItem, string> = await invoke(
-      'update_todo_item_complete',
-      {
-        listId,
-        todoId,
-        complete,
-      }
-    );
-
-    if (typeof result === 'string') {
-      toast.error(`Something went wrong: ${result}`);
-      return;
-    }
-
-    set({
-      todoLists: [
-        ...get().todoLists.map((todoList) => {
-          if (todoList.id === listId) {
-            todoList.todos = todoList.todos.map((todoItem) => {
-              return todoItem.id === todoId ? result : todoItem;
+    notes: [],
+    selectedNote: null,
+    selectNote: (note: Note | null) => {
+        set({ selectedNote: note });
+    },
+    getNotes: async () => {
+        try {
+            const result = await invoke<Note[]>('load_notes');
+            console.log('Loaded notes:', result);
+            set({ notes: result });
+        } catch (error) {
+            console.error('Failed to load notes:', error);
+            toast.error('Failed to load notes');
+            throw error;
+        }
+    },
+    createNote: async (title: string, content: string) => {
+        try {
+            const note: Note = {
+                id: Date.now(),
+                title,
+                content,
+                timestamp: new Date().toISOString(),
+            };
+            console.log('Creating note:', note);
+            await invoke('save_note', { note });
+            console.log('Note saved successfully');
+            set({
+                notes: [note, ...get().notes],
+                selectedNote: note,
             });
-          }
-
-          return todoList;
-        }),
-      ],
-    });
-  },
-  deleteTodoItem: async (listId: number, todoId: number) => {
-    const result: Result<TodoItem, string> = await invoke('delete_todo_item', {
-      todoId,
-    });
-    if (typeof result === 'string') {
-      toast.error(`Something went wrong: ${result}`);
-      return;
-    }
-
-    set({
-      todoLists: [
-        ...get().todoLists.map((todoList) => {
-          if (todoList.id === listId) {
-            todoList.todos = todoList.todos.filter(
-              (todoItem) => todoItem.id !== todoId
-            );
-          }
-
-          return todoList;
-        }),
-      ],
-    });
-  },
-  theme: localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
-  setTheme: (theme?: Theme) => {
-    theme = theme ?? get().theme;
-    theme === 'dark'
-      ? document.body.classList.add('dark')
-      : document.body.classList.remove('dark');
-    localStorage.setItem('theme', theme);
-    set({ theme });
-  },
+            toast.success('Note created');
+        } catch (error) {
+            console.error('Failed to create note:', error);
+            toast.error('Failed to create note');
+            throw error;
+        }
+    },
+    updateNote: async (note: Note) => {
+        try {
+            console.log('Updating note:', note);
+            await invoke('save_note', { note });
+            console.log('Note updated successfully');
+            set({
+                notes: get().notes.map((n) => (n.id === note.id ? note : n)),
+            });
+            toast.success('Note saved');
+        } catch (error) {
+            console.error('Failed to update note:', error);
+            toast.error('Failed to save note');
+            throw error;
+        }
+    },
+    deleteNote: async (noteId: number) => {
+        try {
+            console.log('Deleting note:', noteId);
+            await invoke('delete_note', { noteId });
+            console.log('Note deleted successfully');
+            set({
+                notes: get().notes.filter((note) => note.id !== noteId),
+                selectedNote: get().selectedNote?.id === noteId ? null : get().selectedNote,
+            });
+            toast.success('Note deleted');
+        } catch (error) {
+            console.error('Failed to delete note:', error);
+            toast.error('Failed to delete note');
+            throw error;
+        }
+    },
+    theme: localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
+    setTheme: (theme?: Theme) => {
+        theme = theme ?? get().theme;
+        theme === 'dark'
+            ? document.body.classList.add('dark')
+            : document.body.classList.remove('dark');
+        localStorage.setItem('theme', theme);
+        set({ theme });
+    },
 }));
