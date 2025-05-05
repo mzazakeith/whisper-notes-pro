@@ -15,19 +15,29 @@ export default function App() {
     }, []);
 
     return (
-        <div className="bg-gray-50 dark:bg-slate-800 dark:text-white flex flex-row h-screen w-screen">
-            <NoteSidebar />
-            {selectedNote ? (
-                <NoteEditor note={selectedNote} />
-            ) : (
-                <div className="flex grow h-full justify-center items-center">
-                    <p className="font-medium text-lg">Select a note or create a new one to get started</p>
-                </div>
-            )}
+        <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+            <div className="w-80 flex-shrink-0">
+                <NoteSidebar />
+            </div>
+            <main className="flex-1">
+                {selectedNote ? (
+                    <NoteEditor note={selectedNote} />
+                ) : (
+                    <div className="flex h-full items-center justify-center">
+                        <div className="max-w-md text-center">
+                            <h2 className="mb-2 text-xl font-semibold tracking-tight">No Note Selected</h2>
+                            <p className="text-sm text-muted-foreground">
+                                Select a note from the sidebar or create a new one to get started
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </main>
             <Toaster
-                position="bottom-center"
+                position="bottom-right"
                 toastOptions={{
-                    className: 'bg-gray-50 dark:bg-slate-600 dark:text-white rounded-md shadow-md',
+                    className: '!bg-background !text-foreground border border-border',
+                    duration: 3000,
                 }}
             />
         </div>

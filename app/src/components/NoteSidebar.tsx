@@ -1,8 +1,22 @@
 import { useState } from 'react';
-import { MoonIcon, PlusIcon, SunIcon } from '@heroicons/react/solid';
 import { useStore } from '../store/store';
 import { Note } from '../types/Note';
-import Button from './Button';
+import { ScrollArea } from './ui/scroll-area';
+import { Button } from './ui/button';
+import { Separator } from './ui/separator';
+import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import {
+    PlusIcon,
+    MoonIcon,
+    SunIcon,
+    SearchIcon,
+    DocumentTextIcon,
+    ChevronDownIcon,
+    XIcon,
+} from '@heroicons/react/outline';
+import { format } from 'date-fns';
 
 export default function NoteSidebar() {
     const notes = useStore((state) => state.notes);
@@ -11,59 +25,119 @@ export default function NoteSidebar() {
     const selectNote = useStore((state) => state.selectNote);
     const theme = useStore((state) => state.theme);
     const setTheme = useStore((state) => state.setTheme);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const handleCreateNote = async () => {
-        console.log('Creating new note...');
         try {
             const timestamp = new Date();
-            const title = `Note ${timestamp.toLocaleString()}`;
+            const title = `Note ${format(timestamp, 'PPp')}`;
             await createNote(title, '');
-            console.log('Note created successfully');
         } catch (error) {
             console.error('Error creating note:', error);
         }
     };
 
+    const filteredNotes = notes.filter((note) =>
+        note.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
-        <div className="border-gray-100 border-r dark:border-slate-900 flex flex-col max-w-lg min-w-[250px] py-2 w-1/4">
-            <div className="flex flex-row justify-between mb-2 px-4">
-                <p className="flex font-medium self-end text-lg">Notes</p>
-                <Button
-                    icon={<PlusIcon className="h-[22px] w-[16px]" />}
-                    onClick={handleCreateNote}
-                />
+        <div className="flex h-full flex-col border-r border-border bg-card">
+            <div className="flex flex-col space-y-4 p-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold tracking-tight">Notes</h2>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={handleCreateNote}
+                                    className="h-8 w-8"
+                                >
+                                    <PlusIcon className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Create new note</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+                <div className="relative">
+                    <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search notes..."
+                        className="pl-8"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {searchQuery && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1 h-7 w-7"
+                            onClick={() => setSearchQuery('')}
+                        >
+                            <XIcon className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
             </div>
-            <div className="flex flex-col gap-2 grow overflow-auto px-2">
-                {notes.map((note: Note) => (
-                    <div
-                        key={`note-${note.id}`}
-                        className={`cursor-pointer p-2 rounded-md transition-colors ${
-                            selectedNote?.id === note.id
-                                ? 'bg-blue-500 text-white'
-                                : 'hover:bg-gray-100 dark:hover:bg-slate-700'
-                        }`}
-                        onClick={() => selectNote(note)}
-                    >
-                        <div className="font-medium truncate">{note.title}</div>
-                        <div className="text-sm truncate opacity-75">
-                            {new Date(note.timestamp).toLocaleDateString()}
+            <Separator />
+            <ScrollArea className="flex-1 px-3">
+                <div className="space-y-1 p-2">
+                    {filteredNotes.length === 0 ? (
+                        <div className="flex h-32 items-center justify-center">
+                            <p className="text-sm text-muted-foreground">No notes found</p>
                         </div>
-                    </div>
-                ))}
-            </div>
-            <div className="flex flex-row px-2">
-                {theme === 'dark' && (
-                    <Button
-                        icon={<SunIcon className="h-6 w-4" />}
-                        onClick={() => setTheme('light')}
-                    />
-                )}
-                {theme === 'light' && (
-                    <Button
-                        icon={<MoonIcon className="h-6 w-4" />}
-                        onClick={() => setTheme('dark')}
-                    />
-                )}
+                    ) : (
+                        filteredNotes.map((note: Note) => (
+                            <div
+                                key={`note-${note.id}`}
+                                className={`group flex cursor-pointer flex-col space-y-2 rounded-lg border p-3 text-sm transition-colors hover:bg-accent ${
+                                    selectedNote?.id === note.id
+                                        ? 'bg-accent'
+                                        : 'hover:bg-accent/50'
+                                }`}
+                                onClick={() => selectNote(note)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="line-clamp-1 flex-1 font-medium">
+                                        {note.title}
+                                    </span>
+                                    <ChevronDownIcon className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                                </div>
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>{format(new Date(note.timestamp), 'MMM d, yyyy')}</span>
+                                    <Badge variant="secondary" className="opacity-0 transition-opacity group-hover:opacity-100">
+                                        {format(new Date(note.timestamp), 'p')}
+                                    </Badge>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </ScrollArea>
+            <Separator className="my-2" />
+            <div className="p-4">
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                className="h-8 w-8"
+                            >
+                                {theme === 'dark' ? (
+                                    <SunIcon className="h-4 w-4" />
+                                ) : (
+                                    <MoonIcon className="h-4 w-4" />
+                                )}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Toggle theme</TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
             </div>
         </div>
     );
