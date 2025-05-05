@@ -10,7 +10,7 @@ type State = {
     selectNote: (note: Note | null) => void;
     getNotes: () => Promise<void>;
     createNote: (title: string, content: string) => Promise<void>;
-    updateNote: (note: Note) => Promise<void>;
+    updateNote: (id: number, title: string, content: string) => Promise<void>;
     deleteNote: (noteId: number) => Promise<void>;
     theme: Theme;
     setTheme: (theme?: Theme) => void;
@@ -55,15 +55,22 @@ export const useStore = create<State>((set, get) => ({
             throw error;
         }
     },
-    updateNote: async (note: Note) => {
+    updateNote: async (id: number, title: string, content: string) => {
         try {
+            const note: Note = {
+                id,
+                title,
+                content,
+                timestamp: new Date().toISOString(),
+            };
             console.log('Updating note:', note);
             await invoke('save_note', { note });
             console.log('Note updated successfully');
             set({
-                notes: get().notes.map((n) => (n.id === note.id ? note : n)),
+                notes: get().notes.map((n) => (n.id === id ? note : n)),
+                selectedNote: note,
             });
-            toast.success('Note saved');
+            // toast.success('Note saved');
         } catch (error) {
             console.error('Failed to update note:', error);
             toast.error('Failed to save note');

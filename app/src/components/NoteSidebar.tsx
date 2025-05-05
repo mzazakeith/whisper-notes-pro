@@ -8,14 +8,14 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import {
-    PlusIcon,
-    MoonIcon,
-    SunIcon,
-    SearchIcon,
-    DocumentTextIcon,
-    ChevronDownIcon,
-    XIcon,
-} from '@heroicons/react/outline';
+    Plus as PlusIcon,
+    Moon as MoonIcon,
+    Sun as SunIcon,
+    Search as SearchIcon,
+    FileText as DocumentTextIcon,
+    ChevronDown as ChevronDownIcon,
+    X as XIcon,
+} from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function NoteSidebar() {
