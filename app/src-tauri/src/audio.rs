@@ -3,15 +3,19 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::fs::{self, File};
 use std::path::PathBuf;
-use std::io::{Write, BufReader};
+use std::io::{Write};
 use hound::{WavSpec, WavWriter, WavReader};
 use whisper_rs::{WhisperContext, FullParams, SamplingStrategy};
 use std::thread;
 use reqwest;
+use rubato::{Resampler, SincFixedIn, SincInterpolationType, SincInterpolationParameters};
 
-const SAMPLE_RATE: u32 = 16000;
+const TARGET_SAMPLE_RATE: u32 = 16000;
+const RECORDING_SAMPLE_RATE: u32 = 44100;
 const CHANNELS: u16 = 1;
-const MODEL_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin";
+// const MODEL_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin";
+const MODEL_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin";
+
 
 pub async fn ensure_model_exists(app_data_dir: PathBuf) -> Result<PathBuf, String> {
     let models_dir = app_data_dir.join("models");
@@ -66,15 +70,23 @@ impl AudioRecorder {
         let device = host.default_input_device()
             .ok_or_else(|| "No input device available".to_string())?;
 
+        let supported_configs = device.supported_input_configs()
+            .map_err(|e| format!("Error getting supported input configs: {}", e))?;
+        
+        println!("Supported input configs:");
+        for config in supported_configs {
+            println!("  {:?}", config);
+        }
+
         let config = cpal::StreamConfig {
             channels: CHANNELS,
-            sample_rate: cpal::SampleRate(SAMPLE_RATE),
+            sample_rate: cpal::SampleRate(RECORDING_SAMPLE_RATE),
             buffer_size: cpal::BufferSize::Default,
         };
 
         let spec = WavSpec {
             channels: CHANNELS,
-            sample_rate: SAMPLE_RATE,
+            sample_rate: RECORDING_SAMPLE_RATE,
             bits_per_sample: 16,
             sample_format: hound::SampleFormat::Int,
         };
@@ -102,7 +114,7 @@ impl AudioRecorder {
             let writer_for_callback = Arc::clone(&writer_clone);
             let is_recording_for_callback = Arc::clone(&is_recording_clone);
 
-            let stream = device.build_input_stream(
+            let stream = match device.build_input_stream(
                 &config,
                 move |data: &[f32], _: &cpal::InputCallbackInfo| {
                     if !is_recording_for_callback.load(Ordering::SeqCst) {
@@ -117,9 +129,19 @@ impl AudioRecorder {
                 },
                 err_fn,
                 None
-            ).unwrap();
+            ) {
+                Ok(stream) => stream,
+                Err(e) => {
+                    eprintln!("Failed to build input stream: {}", e);
+                    return;
+                }
+            };
 
-            stream.play().unwrap();
+            if let Err(e) = stream.play() {
+                eprintln!("Failed to play stream: {}", e);
+                return;
+            }
+
             tx.send(()).unwrap(); // Signal that the stream is ready
 
             // Keep the stream alive while recording
@@ -179,6 +201,29 @@ impl AudioRecorder {
                 .map_err(|e| format!("Failed to read audio samples: {}", e))?
         };
 
+        // Resample the audio to 16kHz
+        let params = SincInterpolationParameters {
+            sinc_len: 256,
+            f_cutoff: 0.95,
+            interpolation: SincInterpolationType::Linear,
+            oversampling_factor: 256,
+            window: rubato::WindowFunction::BlackmanHarris2,
+        };
+
+        let mut resampler = SincFixedIn::<f32>::new(
+            TARGET_SAMPLE_RATE as f64 / RECORDING_SAMPLE_RATE as f64,
+            1.0,
+            params,
+            samples.len(),
+            1
+        ).map_err(|e| format!("Failed to create resampler: {}", e))?;
+
+        let input_chunks = vec![samples];
+        let mut output_chunks = resampler.process(&input_chunks, None)
+            .map_err(|e| format!("Failed to resample audio: {}", e))?;
+        
+        let resampled_samples = std::mem::take(&mut output_chunks[0]);
+
         // Initialize whisper context
         let ctx = WhisperContext::new(
             model_path.to_str().unwrap()
@@ -194,7 +239,7 @@ impl AudioRecorder {
         let mut state = ctx.create_state()
             .map_err(|e| format!("Failed to create state: {}", e))?;
 
-        state.full(params, &samples)
+        state.full(params, &resampled_samples)
             .map_err(|e| format!("Failed to process audio: {}", e))?;
 
         let num_segments = state.full_n_segments()
