@@ -1,43 +1,65 @@
 import { useState, useEffect } from 'react';
-import { MicrophoneIcon, StopIcon } from '@heroicons/react/outline';
 import { invoke } from '@tauri-apps/api/tauri';
-import Button from './Button';
+import { Button } from '../components/ui/button';
+import { Progress } from '../components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
+import {
+    Mic,
+    MicOff,
+    Loader2,
+    Waves,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-type AudioRecorderProps = {
-    onTranscriptionComplete: (text: string) => void;
-};
+interface AudioRecorderProps {
+    onTranscriptionComplete: (transcription: string) => void;
+}
 
 export default function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isModelReady, setIsModelReady] = useState(false);
-    const [isPreparingModel, setIsPreparingModel] = useState(true);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+    const [modelReady, setModelReady] = useState(false);
 
     useEffect(() => {
-        const prepareModel = async () => {
-            try {
-                await invoke('ensure_model_ready');
-                setIsModelReady(true);
-            } catch (error) {
-                console.error('Failed to prepare model:', error);
-                // TODO: Show error toast
-            } finally {
-                setIsPreparingModel(false);
+        let interval: NodeJS.Timeout;
+        if (isRecording) {
+            interval = setInterval(() => {
+                setRecordingDuration((prev) => prev + 1);
+            }, 1000);
+        }
+        return () => {
+            if (interval) {
+                clearInterval(interval);
             }
         };
+    }, [isRecording]);
 
-        prepareModel();
+    useEffect(() => {
+        const initializeModel = async () => {
+            try {
+                await invoke('ensure_model_ready');
+                setModelReady(true);
+            } catch (error) {
+                console.error('Failed to initialize model:', error);
+            }
+        };
+        initializeModel();
     }, []);
 
+    const formatDuration = (seconds: number) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    };
+
     const startRecording = async () => {
-        if (!isModelReady) return;
-        
         try {
             await invoke('start_audio_recording');
             setIsRecording(true);
+            setRecordingDuration(0);
         } catch (error) {
             console.error('Failed to start recording:', error);
-            // TODO: Show error toast
         }
     };
 
@@ -49,49 +71,85 @@ export default function AudioRecorder({ onTranscriptionComplete }: AudioRecorder
             onTranscriptionComplete(transcription);
         } catch (error) {
             console.error('Failed to stop recording:', error);
-            // TODO: Show error toast
         } finally {
             setIsProcessing(false);
+            setRecordingDuration(0);
         }
     };
 
-    if (isPreparingModel) {
+    if (!modelReady) {
         return (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-                Preparing speech recognition...
-            </span>
-        );
-    }
-
-    if (!isModelReady) {
-        return (
-            <span className="text-sm text-red-500 dark:text-red-400">
-                Speech recognition unavailable
-            </span>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="relative"
+                            disabled
+                        >
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        Initializing speech recognition...
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         );
     }
 
     return (
         <div className="flex items-center gap-2">
-            {!isRecording && !isProcessing ? (
-                <Button
-                    icon={<MicrophoneIcon className="h-5 w-5" />}
-                    text="Record"
-                    onClick={startRecording}
-                    variant="primary"
-                />
-            ) : isRecording ? (
-                <Button
-                    icon={<StopIcon className="h-5 w-5" />}
-                    text="Stop"
-                    onClick={stopRecording}
-                    variant="danger"
-                />
-            ) : null}
-            {isProcessing && (
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Processing audio...
-                </span>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant={isRecording ? "destructive" : "outline"}
+                            size="icon"
+                            className={cn(
+                                "relative",
+                                isRecording && "animate-pulse"
+                            )}
+                            onClick={isRecording ? stopRecording : startRecording}
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : isRecording ? (
+                                <>
+                                    <MicOff className="h-4 w-4" />
+                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+                                    </span>
+                                </>
+                            ) : (
+                                <Mic className="h-4 w-4" />
+                            )}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        {isProcessing
+                            ? "Processing audio..."
+                            : isRecording
+                            ? "Stop recording"
+                            : "Start recording"}
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+
+            {isRecording && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-5">
+                    <Waves className="h-4 w-4 animate-pulse text-destructive" />
+                    <span className="text-sm font-medium">
+                        {formatDuration(recordingDuration)}
+                    </span>
+                    <Progress 
+                        value={((recordingDuration % 60) / 60) * 100} 
+                        className="w-[60px]"
+                    />
+                </div>
             )}
         </div>
     );

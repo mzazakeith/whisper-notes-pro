@@ -22,6 +22,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import AudioRecorder from './AudioRecorder';
 import toast from 'react-hot-toast';
 
 interface NoteEditorProps {
@@ -75,6 +76,14 @@ export default function NoteEditor({ note }: NoteEditorProps) {
         }
     };
 
+    const handleTranscription = (transcription: string) => {
+        const newContent = content ? `${content}\n\n${transcription}` : transcription;
+        setContent(newContent);
+        if (!isEditing) {
+            setIsEditing(true);
+        }
+    };
+
     const hasUnsavedChanges = 
         title !== lastSavedRef.current.title || 
         content !== lastSavedRef.current.content;
@@ -112,6 +121,10 @@ export default function NoteEditor({ note }: NoteEditorProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <AudioRecorder onTranscriptionComplete={handleTranscription} />
+                    
+                    <Separator orientation="vertical" className="h-6" />
+
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
