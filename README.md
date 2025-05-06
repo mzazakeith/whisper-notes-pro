@@ -13,6 +13,16 @@ Transform your voice into text effortlessly with Whisper Notes Pro - a modern, l
 - **Instant Search**: Quick note search with real-time filtering
 - **Keyboard Shortcuts**: Efficient note management with keyboard support
 
+## 📸 Demo
+
+Here's a sneak peek of Whisper Notes Pro in action:
+
+**Light Mode:**
+![Whisper Notes Pro Light Mode Demo](demowhisperlight.gif)
+
+**Dark Mode:**
+![Whisper Notes Pro Dark Mode Demo](demowhisper.gif)
+
 ## 🚀 Getting Started
 
 ### Prerequisites

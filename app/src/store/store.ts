@@ -86,7 +86,6 @@ export const useStore = create<State>((set, get) => ({
                 notes: get().notes.filter((note) => note.id !== noteId),
                 selectedNote: get().selectedNote?.id === noteId ? null : get().selectedNote,
             });
-            toast.success('Note deleted');
         } catch (error) {
             console.error('Failed to delete note:', error);
             toast.error('Failed to delete note');
