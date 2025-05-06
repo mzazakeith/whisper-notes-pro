@@ -2,6 +2,8 @@
 
 Transform your voice into text effortlessly with Whisper Notes Pro - a modern, lightweight note-taking app powered by whisper.cpp. Capture your thoughts, ideas, and notes through speech, all processed locally on your machine with advanced audio processing support.
 
+[<img src="https://devin.ai/assets/askdeepwiki.png" alt="Ask https://DeepWiki.com" height="20"/>]([https://deepwiki.com/mzazakeith/PuppetMaster](https://deepwiki.com/mzazakeith/whisper-notes-pro)
+
 ## ✨ Features
 
 - **Voice-to-Text**: Seamlessly convert speech to text using state-of-the-art Whisper technology
