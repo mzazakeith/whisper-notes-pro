@@ -79,7 +79,6 @@ pnpm tauri build
 ### Backend Stack
 - Tauri for cross-platform desktop support
 - Rust for performance-critical operations
-- SQLite for local data storage
 - Custom audio processing pipeline
 
 ## 🗺️ Roadmap
