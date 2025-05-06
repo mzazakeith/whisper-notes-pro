@@ -11,7 +11,6 @@ Transform your voice into text effortlessly with Whisper Notes Pro - a modern, l
 - **Cross-Platform**: Available for macOS (including Apple Silicon), Windows, and Linux
 - **Privacy-First**: Your voice data never leaves your computer
 - **Instant Search**: Quick note search with real-time filtering
-- **Keyboard Shortcuts**: Efficient note management with keyboard support
 
 ## 📸 Demo
 
